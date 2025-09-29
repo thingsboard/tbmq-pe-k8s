@@ -1,0 +1,117 @@
+#
+# ThingsBoard, Inc. ("COMPANY") CONFIDENTIAL
+#
+# Copyright © 2016-2025 ThingsBoard, Inc. All Rights Reserved.
+#
+# NOTICE: All information contained herein is, and remains
+# the property of ThingsBoard, Inc. and its suppliers,
+# if any.  The intellectual and technical concepts contained
+# herein are proprietary to ThingsBoard, Inc.
+# and its suppliers and may be covered by U.S. and Foreign Patents,
+# patents in process, and are protected by trade secret or copyright law.
+#
+# Dissemination of this information or reproduction of this material is strictly forbidden
+# unless prior written permission is obtained from COMPANY.
+#
+# Access to the source code contained herein is hereby forbidden to anyone except current COMPANY employees,
+# managers or contractors who have executed Confidentiality and Non-disclosure agreements
+# explicitly covering such access.
+#
+# The copyright notice above does not evidence any actual or intended publication
+# or disclosure  of  this source code, which includes
+# information that is confidential and/or proprietary, and is a trade secret, of  COMPANY.
+# ANY REPRODUCTION, MODIFICATION, DISTRIBUTION, PUBLIC  PERFORMANCE,
+# OR PUBLIC DISPLAY OF OR THROUGH USE  OF THIS  SOURCE CODE  WITHOUT
+# THE EXPRESS WRITTEN CONSENT OF COMPANY IS STRICTLY PROHIBITED,
+# AND IN VIOLATION OF APPLICABLE LAWS AND INTERNATIONAL TREATIES.
+# THE RECEIPT OR POSSESSION OF THIS SOURCE CODE AND/OR RELATED INFORMATION
+# DOES NOT CONVEY OR IMPLY ANY RIGHTS TO REPRODUCE, DISCLOSE OR DISTRIBUTE ITS CONTENTS,
+# OR TO MANUFACTURE, USE, OR SELL ANYTHING THAT IT  MAY DESCRIBE, IN WHOLE OR IN PART.
+#
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: tbmq-integration-executor
+  namespace: thingsboard-mqtt-broker
+spec:
+  serviceName: tbmq-integration-executor
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tbmq-integration-executor
+  template:
+    metadata:
+      labels:
+        app: tbmq-integration-executor
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: "app"
+                    operator: In
+                    values:
+                      - tbmq-integration-executor
+              topologyKey: "kubernetes.io/hostname"
+      securityContext:
+        runAsUser: 799
+        runAsNonRoot: true
+        fsGroup: 799
+      volumes:
+        - name: tbmq-ie-config
+          configMap:
+            name: tbmq-ie-config
+            items:
+              - key: conf
+                path: tbmq-integration-executor.conf
+              - key: logback
+                path: logback.xml
+        - name: tbmq-ie-logs
+          emptyDir: { }
+      containers:
+        - name: server
+          imagePullPolicy: Always
+          image: thingsboard/tbmq-pe-integration-executor:2.2.0PE-SNAPSHOT
+          ports:
+            - containerPort: 8082
+              name: http
+          env:
+            - name: TB_SERVICE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: TB_KAFKA_SERVERS
+              value: "tbmq-kafka:9092"
+            - name: TB_SERVICE_INTEGRATIONS_SUPPORTED
+              value: "ALL"
+            - name: TB_SERVICE_INTEGRATIONS_EXCLUDED
+              value: "NONE"
+          volumeMounts:
+            - name: tbmq-ie-config
+              mountPath: /config
+          readinessProbe:
+            periodSeconds: 20
+            tcpSocket:
+              port: http
+          livenessProbe:
+            initialDelaySeconds: 120
+            periodSeconds: 20
+            tcpSocket:
+              port: http
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tbmq-integration-executor
+  namespace: thingsboard-mqtt-broker
+spec:
+  type: ClusterIP
+  selector:
+    app: tbmq-integration-executor
+  ports:
+    - port: 8082
+      name: http
+---

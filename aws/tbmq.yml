@@ -1,0 +1,177 @@
+#
+# ThingsBoard, Inc. ("COMPANY") CONFIDENTIAL
+#
+# Copyright © 2016-2025 ThingsBoard, Inc. All Rights Reserved.
+#
+# NOTICE: All information contained herein is, and remains
+# the property of ThingsBoard, Inc. and its suppliers,
+# if any.  The intellectual and technical concepts contained
+# herein are proprietary to ThingsBoard, Inc.
+# and its suppliers and may be covered by U.S. and Foreign Patents,
+# patents in process, and are protected by trade secret or copyright law.
+#
+# Dissemination of this information or reproduction of this material is strictly forbidden
+# unless prior written permission is obtained from COMPANY.
+#
+# Access to the source code contained herein is hereby forbidden to anyone except current COMPANY employees,
+# managers or contractors who have executed Confidentiality and Non-disclosure agreements
+# explicitly covering such access.
+#
+# The copyright notice above does not evidence any actual or intended publication
+# or disclosure  of  this source code, which includes
+# information that is confidential and/or proprietary, and is a trade secret, of  COMPANY.
+# ANY REPRODUCTION, MODIFICATION, DISTRIBUTION, PUBLIC  PERFORMANCE,
+# OR PUBLIC DISPLAY OF OR THROUGH USE  OF THIS  SOURCE CODE  WITHOUT
+# THE EXPRESS WRITTEN CONSENT OF COMPANY IS STRICTLY PROHIBITED,
+# AND IN VIOLATION OF APPLICABLE LAWS AND INTERNATIONAL TREATIES.
+# THE RECEIPT OR POSSESSION OF THIS SOURCE CODE AND/OR RELATED INFORMATION
+# DOES NOT CONVEY OR IMPLY ANY RIGHTS TO REPRODUCE, DISCLOSE OR DISTRIBUTE ITS CONTENTS,
+# OR TO MANUFACTURE, USE, OR SELL ANYTHING THAT IT  MAY DESCRIBE, IN WHOLE OR IN PART.
+#
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: tbmq
+  namespace: thingsboard-mqtt-broker
+spec:
+  serviceName: tbmq
+  replicas: 2
+  selector:
+    matchLabels:
+      app: tbmq
+  template:
+    metadata:
+      labels:
+        app: tbmq
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: "app"
+                    operator: In
+                    values:
+                      - tbmq
+              topologyKey: "kubernetes.io/hostname"
+      volumes:
+        - name: tbmq-config
+          configMap:
+            name: tbmq-config
+            items:
+              - key: conf
+                path: thingsboard-mqtt-broker.conf
+              - key: logback
+                path: logback.xml
+        # Uncomment the following lines to enable two-way MQTTS
+      #        - name: tbmq-mqtts-config
+      #          configMap:
+      #            name: tbmq-mqtts-config
+      #            items:
+      #              - key: server.pem
+      #                path: server.pem
+      #              - key: mqttserver_key.pem
+      #                path: mqttserver_key.pem
+      nodeSelector:
+        role: tbmq
+      containers:
+        - name: server
+          imagePullPolicy: Always
+          image: thingsboard/tbmq-pe-node:2.2.0PE-SNAPSHOT
+          ports:
+            - containerPort: 8083
+              name: http
+            - containerPort: 443
+              name: https
+            - containerPort: 1883
+              name: mqtt
+            - containerPort: 8883
+              name: mqtts
+            - containerPort: 8084
+              name: mqtt-ws
+            - containerPort: 8085
+              name: mqtt-wss
+          env:
+            - name: TB_SERVICE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: SECURITY_MQTT_BASIC_ENABLED
+              value: "true"
+            - name: SECURITY_MQTT_SSL_ENABLED
+              value: "true"
+            - name: TB_KAFKA_SERVERS
+              value: "PUT_YOUR_KAFKA_SERVERS_HERE"
+            - name: HTTP_BIND_PORT
+              value: "8083"
+            - name: LISTENER_TCP_BIND_PORT
+              value: "1883"
+            - name: LISTENER_SSL_BIND_PORT
+              value: "8883"
+            - name: STATS_ENABLED
+              value: "true"
+            - name: STATS_PRINT_INTERVAL_MS
+              value: "60000"
+            - name: METRICS_ENDPOINTS_EXPOSE
+              value: "prometheus"
+            - name: TB_KAFKA_ENABLE_TOPIC_DELETION
+              value: "false"
+            # Uncomment the following lines to enable two-way MQTTS
+          #            - name: LISTENER_SSL_ENABLED
+          #              value: "true"
+          #            - name: LISTENER_SSL_CREDENTIALS_TYPE
+          #              value: "PEM"
+          #            - name: LISTENER_SSL_PEM_CERT
+          #              value: "/ssl-config/server.pem"
+          #            - name: LISTENER_SSL_PEM_KEY
+          #              value: "/ssl-config/mqttserver_key.pem"
+          envFrom:
+            - configMapRef:
+                name: tbmq-db-config
+            - configMapRef:
+                name: tbmq-cache-config
+          volumeMounts:
+            - mountPath: /config
+              name: tbmq-config
+            # Uncomment the following lines to enable two-way MQTTS
+          #            - mountPath: /ssl-config
+          #              name: tbmq-mqtts-config
+          readinessProbe:
+            tcpSocket:
+              port: 1883
+            timeoutSeconds: 10
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            successThreshold: 1
+            failureThreshold: 5
+          livenessProbe:
+            timeoutSeconds: 10
+            tcpSocket:
+              port: 1883
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 10
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tbmq
+  namespace: thingsboard-mqtt-broker
+spec:
+  type: ClusterIP
+  selector:
+    app: tbmq
+  ports:
+    - port: 8083
+      name: http
+    - port: 1883
+      name: mqtt
+    - port: 8883
+      name: mqtts
+    - port: 8084
+      name: mqtt-ws
+    - port: 8085
+      name: mqtt-wss

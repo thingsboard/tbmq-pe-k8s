@@ -1,2 +1,3 @@
-# tbmq-pe-k8s
-TBMQ PE Kubernetes scripts and docs
+# TBMQ PE Kubernetes scripts and docs
+
+Here you can find scripts for deployment on different Kubernetes platforms.
