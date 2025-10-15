@@ -80,6 +80,17 @@ spec:
               value: "15000"
             - name: REDIS_HOST
               value: "tbmq-valkey"
+
+            # License info
+            - name: TBMQ_LICENSE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: tbmq-license
+                  key: license-key
+            - name: TB_LICENSE_INSTANCE_DATA_FILE
+              value: "/data/tbmq-instance-license-$(TB_SERVICE_ID).data"
+            # License info
+
           envFrom:
             - configMapRef:
                 name: tbmq-db-config

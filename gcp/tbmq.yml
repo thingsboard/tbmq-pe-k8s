@@ -88,6 +88,16 @@ spec:
             - name: SECURITY_MQTT_SSL_ENABLED
               value: "true"
 
+            # License info
+            - name: TBMQ_LICENSE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: tbmq-license
+                  key: license-key
+            - name: TB_LICENSE_INSTANCE_DATA_FILE
+              value: "/data/tbmq-instance-license-$(TB_SERVICE_ID).data"
+            # License info
+
           # Uncomment the following lines to connect to Apache Kafka
           #            - name: TB_KAFKA_SERVERS
           #              value: "tb-kafka:9092"
