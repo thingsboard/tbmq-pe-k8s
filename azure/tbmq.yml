@@ -88,6 +88,16 @@ spec:
             - name: SECURITY_MQTT_SSL_ENABLED
               value: "true"
 
+            # License info
+            - name: TBMQ_LICENSE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: tbmq-license
+                  key: license-key
+            - name: TBMQ_LICENSE_INSTANCE_DATA_FILE
+              value: "/data/tbmq-instance-license-$(TB_SERVICE_ID).data"
+            # License info
+
           # Uncomment the following lines to connect to Apache Kafka
           #            - name: TB_KAFKA_SERVERS
           #              value: "tb-kafka:9092"
@@ -115,6 +125,9 @@ spec:
               name: tbmq-config
             - mountPath: /var/log/thingsboard-mqtt-broker
               name: tbmq-logs
+            - mountPath: /data
+              name: tbmq-data
+              readOnly: false
           # Uncomment the following lines to enable two-way MQTTS
           #            - mountPath: /ssl-config
           #              name: tbmq-mqtts-config
@@ -135,6 +148,14 @@ spec:
             successThreshold: 1
             failureThreshold: 10
       restartPolicy: Always
+  volumeClaimTemplates:
+    - metadata:
+        name: tbmq-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 1Gi
 ---
 apiVersion: v1
 kind: Service
