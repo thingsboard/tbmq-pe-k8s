@@ -110,7 +110,7 @@ spec:
                 secretKeyRef:
                   name: tbmq-license
                   key: license-key
-            - name: TB_LICENSE_INSTANCE_DATA_FILE
+            - name: TBMQ_LICENSE_INSTANCE_DATA_FILE
               value: "/data/tbmq-instance-license-$(TB_SERVICE_ID).data"
             # License info
 
@@ -134,6 +134,9 @@ spec:
             # Uncomment the following lines to enable two-way MQTTS
           #            - mountPath: /ssl-config
           #              name: tbmq-mqtts-config
+            - mountPath: /data
+              name: tbmq-data
+              readOnly: false
           readinessProbe:
             tcpSocket:
               port: 1883
@@ -151,6 +154,14 @@ spec:
             successThreshold: 1
             failureThreshold: 10
       restartPolicy: Always
+  volumeClaimTemplates:
+    - metadata:
+        name: tbmq-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 1Gi
 ---
 apiVersion: v1
 kind: Service
