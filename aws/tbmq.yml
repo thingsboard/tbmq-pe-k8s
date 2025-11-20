@@ -31,6 +31,10 @@ spec:
       labels:
         app: tbmq
     spec:
+      securityContext:
+        runAsUser: 799
+        runAsNonRoot: true
+        fsGroup: 799
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -50,7 +54,7 @@ spec:
                 path: thingsboard-mqtt-broker.conf
               - key: logback
                 path: logback.xml
-        # Uncomment the following lines to enable two-way MQTTS
+      # Uncomment the following lines to enable two-way MQTTS
       #        - name: tbmq-mqtts-config
       #          configMap:
       #            name: tbmq-mqtts-config
@@ -114,7 +118,7 @@ spec:
               value: "/data/tbmq-instance-license-$(TB_SERVICE_ID).data"
             # License info
 
-            # Uncomment the following lines to enable two-way MQTTS
+          #            Uncomment the following lines to enable two-way MQTTS
           #            - name: LISTENER_SSL_ENABLED
           #              value: "true"
           #            - name: LISTENER_SSL_CREDENTIALS_TYPE
@@ -131,7 +135,7 @@ spec:
           volumeMounts:
             - mountPath: /config
               name: tbmq-config
-            # Uncomment the following lines to enable two-way MQTTS
+          # Uncomment the following lines to enable two-way MQTTS
           #            - mountPath: /ssl-config
           #              name: tbmq-mqtts-config
             - mountPath: /data

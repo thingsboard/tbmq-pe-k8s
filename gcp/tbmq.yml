@@ -31,6 +31,10 @@ spec:
       labels:
         app: tbmq
     spec:
+      securityContext:
+        runAsUser: 799
+        runAsNonRoot: true
+        fsGroup: 799
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
