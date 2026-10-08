@@ -33,7 +33,7 @@ spec:
   containers:
     - name: tb-db-setup
       imagePullPolicy: Always
-      image: thingsboard/tbmq-pe-node:2.4.0PE
+      image: thingsboard/tbmq-pe-node:2.4.1PE
       env:
         - name: SECURITY_MQTT_BASIC_ENABLED
           value: "true"
